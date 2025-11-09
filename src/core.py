@@ -415,63 +415,6 @@ def getSystemInterfaces():
 
     return ifaces
 
-def networkToInterface(ifaces):
-    netRoutes = _tryRead(ROUTES)
-
-    if not netRoutes:
-        return ifaces
-
-    for line in netRoutes.split('\n')[1:]:
-        chunks = removeBlank(line.split('\t'))
-
-        ifaceName = chunks[0]
-        network = chunks[1]
-        mask = chunks[7]
-
-        if not network.replace('0', ''):
-            continue
-
-        network = reversedHexIpToIp(network)
-        mask = reversedHexIpToIp(mask)
-
-        for iface in ifaces:
-            if iface.name == ifaceName:
-                iface.network = network
-                iface.mask = mask
-                break
-
-    fibTrie = _tryRead('/proc/net/fib_trie')
-    if not fibTrie:
-        return ifaces
-
-    localFibTrie = fibTrie.split('Local:')[1].strip()
-    for chunk in localFibTrie.split('+--'):
-        chunkLines = chunk.split('\n')
-        if len(chunkLines) == 1:
-            continue
-
-        address = chunkLines[1].replace('|--', '').strip()
-        if not address:
-            continue
-
-        u32Address = ipToU32(address)
-
-        for iface in ifaces:
-            if iface.network is None or iface.mask is None or iface.ip is not None:
-                continue
-
-            u32Network = ipToU32(iface.network)
-            u32Mask = ipToU32(iface.mask)
-
-            u32BaseAddress = u32Network & u32Mask
-            u32BroadcastAddress = u32BaseAddress | ((~u32Mask) & 0xFFFFFFFF)
-
-            if u32BaseAddress < u32Address < u32BroadcastAddress:
-                iface.ip = address
-                break
-
-    return ifaces
-
 ### PORTS ###
 
 def processesInodes():
