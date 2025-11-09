@@ -5,6 +5,18 @@ if [ "$(id -u)" != "0" ]; then
   exit 1
 fi
 
+mkdir build
+cd build
+
+cmake ../src/cpp/
+make
+
+mkdir -p /usr/local/share/lonet
+cp libnet_if_binding.so /usr/local/share/lonet
+
+cd ..
+rm -rf ./build
+
 python3 -m venv venv
 source venv/bin/activate
 

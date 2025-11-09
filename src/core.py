@@ -1,4 +1,5 @@
 import os
+from cpp_net_if_binding import CppNetIface
 
 ROUTES = '/proc/net/route'
 IFACES_DIR = '/sys/class/net/'
@@ -48,7 +49,7 @@ def ipToU32(ip):
 
     return u32
 
-def maskToCidr(mask):
+def mask4ToCidr(mask):
     u32Mask = ipToU32(mask)
     cidr = 0
 
@@ -80,12 +81,15 @@ class NetworkInterface:
         self.flags = None
         self.alias = None
 
-        self.ip = None
-        self.network = None
-        self.mask = None
+        self.ipv4 = None
+        self.netmask4 = None
         self.cidr = None
 
+        self.ipv6 = None
+        self.netmask6 = None
+
         self.__inspectSysFs()
+        self.__getIpInfo()
 
     def __inspectSysFs(self):
         realPath = os.path.realpath(self.sysFsPath)
@@ -159,6 +163,23 @@ class NetworkInterface:
             if self.type == 'physical':
                 self.type = 'unknown'
 
+    def __getIpInfo(self):
+        ipInfo = CppNetIface.new(self.name)
+
+        if ipInfo is None:
+            return
+
+        self.ipv4 = ipInfo.ipv4
+        self.netmask4 = ipInfo.netmask4
+
+        if self.netmask4:
+            self.cidr = mask4ToCidr(self.netmask4)
+
+        self.ipv6 = ipInfo.ipv6
+        self.netmask6 = ipInfo.netmask6
+
+        self.ifIndex = ipInfo.ifIndex
+
     def decodeFlags(self):
         if not isinstance(self.flags, int):
             return ''
@@ -227,16 +248,8 @@ class NetworkInterface:
     def __repr__(self):
         return f'NetworkInterface( {self.name} [{self.mac}] ; type: {self.type} ; state: {self.state} ; speed: {self.speed} ; mtu: {self.mtu} ; flags: {self.decodeFlags()} )'
 
-    def completeIpConfiguration(self):
-        if self.mac == '00:00:00:00:00:00':
-            self.ip = '127.0.0.1'
-            self.mask = '0.0.0.0'
-
-        if self.mask:
-            self.cidr = maskToCidr(self.mask)
-
     def pretty(self):
-        self.completeIpConfiguration()
+        # self.completeIpConfiguration()
 
         repr = f'{self.name} : {self.type} interface'
 
@@ -246,14 +259,20 @@ class NetworkInterface:
         if self.mac:
             repr += f'\n  mac: {self.mac}'
 
-        if self.ip:
-            repr += f'\n  ip: {self.ip}'
+        if self.ifIndex is not None:
+            repr += f'\n  index: {self.ifIndex}'
 
-        if self.network:
-            repr += f'\n  network: {self.network}'
+        if self.ipv4:
+            repr += f'\n  ipv4: {self.ipv4}'
 
-        if self.mask:
-            repr += f'\n  mask: {self.mask}'
+            if self.netmask4:
+                repr += f'\n    netmask: {self.netmask4}'
+
+        if self.ipv6:
+            repr += f'\n  ipv6: {self.ipv6}'
+
+            if self.netmask6:
+                repr += f'\n    netmask: {self.netmask6}'
 
         if self.mtu:
             repr += f'\n  mtu: {self.mtu}'
@@ -273,17 +292,18 @@ class NetworkInterface:
         return repr
 
     def concise(self):
-        self.completeIpConfiguration()
-
         fmt = f'{self.name} : {self.type} interface'
         if self.mac:
             fmt += f'\n  mac: {self.mac}'
 
-        if self.ip:
-            fmt += f'\n  ip: {self.ip}'
+        if self.ipv4:
+            fmt += f'\n  ipv4: {self.ipv4}'
 
             if self.cidr is not None:
                 fmt += f'/{self.cidr}'
+
+        if self.ipv6:
+            fmt += f'\n  ipv6: {self.ipv6}'
 
         if self.state:
             fmt += f'\n  state: {self.state}'
@@ -294,7 +314,7 @@ class NetworkInterface:
         return fmt
 
     def verbose(self):
-        self.completeIpConfiguration()
+        # self.completeIpConfiguration()
 
         repr = f'{self.name} : {self.type} interface'
 
@@ -307,14 +327,20 @@ class NetworkInterface:
         if self.mac:
             repr += f'\n  mac: {self.mac}'
 
-        if self.ip:
-            repr += f'\n  ip: {self.ip}'
+        if self.ifIndex is not None:
+            repr += f'\n  index: {self.ifIndex}'
 
-        if self.network:
-            repr += f'\n  network: {self.network}'
+        if self.ipv4:
+            repr += f'\n  ipv4: {self.ipv4}'
 
-        if self.mask:
-            repr += f'\n  mask: {self.mask}'
+            if self.netmask4:
+                repr += f'\n    netmask: {self.netmask4}'
+
+        if self.ipv6:
+            repr += f'\n  ipv6: {self.ipv6}'
+
+            if self.netmask6:
+                repr += f'\n    netmask: {self.netmask6}'
 
         if self.mtu:
             repr += f'\n  mtu: {self.mtu}'

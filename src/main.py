@@ -32,9 +32,7 @@ if __name__ == '__main__':
 
     if args.all:
         interfaces = getSystemInterfaces()
-        interfaces = networkToInterface(interfaces)
-
-        interfaces = sorted(interfaces, key=lambda x: x.name)
+        interfaces = sorted(interfaces, key=lambda x: x.ifIndex)
 
         tcpInodePorts, tcpAddressPorts = mapOpenPorts(TCP_ROUTES)
         udpInodePorts, udpAddressPorts = mapOpenPorts(UDP_ROUTES)
@@ -55,7 +53,7 @@ if __name__ == '__main__':
                 print(interface.verbose())
             else:
                 print(interface.pretty())
-            ip = interface.ip
+            ip = interface.ipv4
 
             localTcpAddressPorts = anyAddressTcpPorts.copy()
 
@@ -75,7 +73,7 @@ if __name__ == '__main__':
 
     elif args.interfaces:
         interfaces = getSystemInterfaces()
-        interfaces = networkToInterface(interfaces)
+        interfaces = sorted(interfaces, key=lambda x: x.ifIndex)
 
         for interface in interfaces:
             if args.virtual and not args.physical:
@@ -126,8 +124,7 @@ if __name__ == '__main__':
 
     else:
         interfaces = getSystemInterfaces()
-        interfaces = networkToInterface(interfaces)
-        interfaces = sorted(interfaces, key=lambda x: x.name)
+        interfaces = sorted(interfaces, key=lambda x: x.ifIndex)
 
         for interface in interfaces:
             if args.virtual and not args.physical:
@@ -139,7 +136,8 @@ if __name__ == '__main__':
                     continue
 
             if args.verbose:
-                print(interface.concise())
-            else:
                 print(interface.verbose())
+            else:
+                print(interface.concise())
+
             print()
