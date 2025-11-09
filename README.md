@@ -1,13 +1,19 @@
 # LONET
 Linux local network information tool written in Python
 
-# Install
+## Install
 run the installation script as root
 ```commandline
 sudo bash install.sh
 ```
 
-# Usage
+## Uninstall
+run the uninstallation script as root
+```commandline
+sudo bash uninstall.sh
+```
+
+## Usage
 ```
 $ lonet --help
 lonet: local network information tool

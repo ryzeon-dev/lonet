@@ -1,6 +1,6 @@
 import sys
 
-from core import mapOpenPorts, getSystemInterfaces, processesInodes, networkToInterface, TCP_ROUTES, UDP_ROUTES
+from core import mapOpenPorts, getSystemInterfaces, processesInodes, TCP_ROUTES, UDP_ROUTES
 from argparser import ArgParser
 
 VERSION = 'v1.0.0'
@@ -15,14 +15,14 @@ if __name__ == '__main__':
         print('lonet: local network information tool')
         print('usage: lonet [OPTIONS]')
         print('options:')
-        print('    -a --all                Shows network interfaces information and relative open ports')
-        print('    -h --help               Shows this message and exits')
-        print('    -i --interfaces         Shows network interfaces information')
-        print('    -p --ports [tcp|udp]    Shows open ports of specified protocol, if omitted shows both')
+        print('    -a --all                Show network interfaces information and relative open ports')
+        print('    -h --help               Show this message and exits')
+        print('    -i --interfaces         Show network interfaces information')
+        print('    -p --ports [tcp|udp]    Show open ports of specified protocol, if omitted show both')
         print('    -virt                   Only show virtual network interfaces')
         print('    -phy                    Only show physical network interfaces')
-        print('    -v --verbose            Showd verbose information7')
-        print('    -V --version            Shows version number and exits')
+        print('    -v --verbose            Show verbose information')
+        print('    -V --version            Show version number and exit')
         print('if no option is specified, shows concise information about network interfaces')
         sys.exit(0)
 
