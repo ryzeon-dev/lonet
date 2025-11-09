@@ -9,20 +9,20 @@ libso.init.restype = None
 libso.getIface.argtypes = [ctypes.c_char_p]
 libso.getIface.restype = ctypes.c_void_p
 
-libso.getIPv4.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
-libso.getIPv4.restype = ctypes.c_char_p
+libso.netIface_getIPv4.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
+libso.netIface_getIPv4.restype = ctypes.c_char_p
 
-libso.getIPv4Netmask.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
-libso.getIPv4Netmask.restype = ctypes.c_char_p
+libso.netIface_getIPv4Netmask.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
+libso.netIface_getIPv4Netmask.restype = ctypes.c_char_p
 
-libso.getIPv6.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
-libso.getIPv6.restype = ctypes.c_char_p
+libso.netIface_getIPv6.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
+libso.netIface_getIPv6.restype = ctypes.c_char_p
 
-libso.getIPv6Netmask.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
-libso.getIPv6Netmask.restype = ctypes.c_char_p
+libso.netIface_getIPv6Netmask.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
+libso.netIface_getIPv6Netmask.restype = ctypes.c_char_p
 
-libso.getIfIndex.argtypes = [ctypes.c_void_p]
-libso.getIfIndex.restype = ctypes.c_uint
+libso.netIface_getIfIndex.argtypes = [ctypes.c_void_p]
+libso.netIface_getIfIndex.restype = ctypes.c_uint
 
 
 class CppNetIface:
@@ -40,13 +40,13 @@ class CppNetIface:
         if self.ifacePtr is None:
             return
 
-        self.ipv4 = libso.getIPv4(self.ifacePtr, ctypes.create_string_buffer(128)).decode()
-        self.netmask4 = libso.getIPv4Netmask(self.ifacePtr, ctypes.create_string_buffer(128)).decode()
+        self.ipv4 = libso.netIface_getIPv4(self.ifacePtr, ctypes.create_string_buffer(128)).decode()
+        self.netmask4 = libso.netIface_getIPv4Netmask(self.ifacePtr, ctypes.create_string_buffer(128)).decode()
 
-        self.ipv6 = libso.getIPv6(self.ifacePtr, ctypes.create_string_buffer(128)).decode()
-        self.netmask6 = libso.getIPv6Netmask(self.ifacePtr, ctypes.create_string_buffer(128)).decode()
+        self.ipv6 = libso.netIface_getIPv6(self.ifacePtr, ctypes.create_string_buffer(128)).decode()
+        self.netmask6 = libso.netIface_getIPv6Netmask(self.ifacePtr, ctypes.create_string_buffer(128)).decode()
 
-        self.ifIndex = libso.getIfIndex(self.ifacePtr)
+        self.ifIndex = libso.netIface_getIfIndex(self.ifacePtr)
 
     @staticmethod
     def new(ifaceName):

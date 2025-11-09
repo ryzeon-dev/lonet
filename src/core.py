@@ -59,6 +59,21 @@ def mask4ToCidr(mask):
 
     return cidr
 
+def mask6ToCidr(mask):
+    netBits = 0
+    chunks = mask.split(':')
+
+    for chunk in chunks:
+        if not chunk:
+            continue
+
+        u16Chunk = int(chunk, 16)
+        for i in range(16):
+            if checkBit(u16Chunk, 1 << i):
+                netBits += 1
+
+    return netBits
+
 ### INTERFACES ###
 
 class NetworkInterface:
@@ -83,10 +98,11 @@ class NetworkInterface:
 
         self.ipv4 = None
         self.netmask4 = None
-        self.cidr = None
+        self.cidr4 = None
 
         self.ipv6 = None
         self.netmask6 = None
+        self.cidr6 = None
 
         self.__inspectSysFs()
         self.__getIpInfo()
@@ -173,10 +189,13 @@ class NetworkInterface:
         self.netmask4 = ipInfo.netmask4
 
         if self.netmask4:
-            self.cidr = mask4ToCidr(self.netmask4)
+            self.cidr4 = mask4ToCidr(self.netmask4)
 
         self.ipv6 = ipInfo.ipv6
         self.netmask6 = ipInfo.netmask6
+
+        if self.netmask6:
+            self.cidr6 = mask6ToCidr(self.netmask6)
 
         self.ifIndex = ipInfo.ifIndex
 
@@ -299,11 +318,14 @@ class NetworkInterface:
         if self.ipv4:
             fmt += f'\n  ipv4: {self.ipv4}'
 
-            if self.cidr is not None:
-                fmt += f'/{self.cidr}'
+            if self.cidr4 is not None:
+                fmt += f'/{self.cidr4}'
 
         if self.ipv6:
             fmt += f'\n  ipv6: {self.ipv6}'
+
+            if self.cidr6 is not None:
+                fmt += f'/{self.cidr6}'
 
         if self.state:
             fmt += f'\n  state: {self.state}'

@@ -2,9 +2,7 @@
 #include <net/if.h>
 #include <ifaddrs.h>
 #include <arpa/inet.h>
-#include <linux/if.h>
 #include <sys/socket.h>
-#include <sys/types.h>
 #include <vector>
 #include <cstring>
 
@@ -30,16 +28,13 @@ private:
         if (address == nullptr)
             return;
 
-        socklen_t bufferSize;
         if (address->sa_family == AF_INET) {
-            bufferSize = INET_ADDRSTRLEN;
-            this->ipv4 = extractIp(address, bufferSize);
-            this->netmask4 = extractIp(netmask, bufferSize);
+            this->ipv4 = extractIp(address, INET_ADDRSTRLEN);
+            this->netmask4 = extractIp(netmask, INET_ADDRSTRLEN);
 
         } else if (address->sa_family == AF_INET6) {
-            bufferSize = INET6_ADDRSTRLEN;
-            this->ipv6 = extractIp(address, bufferSize);
-            this->netmask6 = extractIp(netmask, bufferSize);
+            this->ipv6 = extractIp(address, INET6_ADDRSTRLEN);
+            this->netmask6 = extractIp(netmask, INET6_ADDRSTRLEN);
 
         } else {
             return;
@@ -77,7 +72,6 @@ public:
 vector<NetIface *> netIfaces;
 
 extern "C" {
-
     void init() {
         struct ifaddrs *ifaddrIterator;
         auto res = getifaddrs(&ifaddrIterator);
@@ -110,27 +104,27 @@ extern "C" {
         return nullptr;
     }
 
-    const char* getIPv4(NetIface* iface, char* buffer) {
+    const char* netIface_getIPv4(NetIface* iface, char* buffer) {
         strcpy(buffer, iface->ipv4.c_str());
         return buffer;
     }
 
-    const char* getIPv4Netmask(NetIface* iface, char* buffer) {
+    const char* netIface_getIPv4Netmask(NetIface* iface, char* buffer) {
         strcpy(buffer, iface->netmask4.c_str());
         return buffer;
     }
 
-    const char* getIPv6(NetIface* iface, char* buffer) {
+    const char* netIface_getIPv6(NetIface* iface, char* buffer) {
         strcpy(buffer, iface->ipv6.c_str());
         return buffer;
     }
 
-    const char* getIPv6Netmask(NetIface* iface, char* buffer) {
+    const char* netIface_getIPv6Netmask(NetIface* iface, char* buffer) {
         strcpy(buffer, iface->netmask6.c_str());
         return buffer;
     }
 
-    unsigned int getIfIndex(NetIface* iface) {
+    unsigned int netIface_getIfIndex(NetIface* iface) {
         return iface->index;
     }
 }
