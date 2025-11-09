@@ -7,7 +7,7 @@
 </p>
 
 # LONET
-Linux local network information tool written in Python
+Linux local network information tool written in Python and C++
 
 ## Install
 run the installation script as root
