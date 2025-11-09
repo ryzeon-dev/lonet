@@ -1,3 +1,11 @@
+<p align="center">
+<img alt="Version Badge" src="https://img.shields.io/badge/dev--version-v1.0.0-16a085">
+<img alt="Version Badge" src="https://img.shields.io/badge/release-v1.0.0-16a085">
+<img alt="License Badge" src="https://img.shields.io/github/license/ryzeon-dev/bmdns?color=16a085">
+<img alt="Language Badge" src="https://img.shields.io/badge/python3-16a085?logo=python&logoColor=16a085&labelColor=5a5a5a">
+<img alt="Language Badge" src="https://img.shields.io/badge/c++-16a085?logo=cplusplus&logoColor=16a085&labelColor=5a5a5a">
+</p>
+
 # LONET
 Linux local network information tool written in Python
 
