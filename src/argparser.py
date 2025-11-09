@@ -56,6 +56,10 @@ class ArgParser:
                 elif arg == '--verbose':
                     self.verbose = True
 
+                else:
+                    print(f'Error: unrecognized argument `{arg}`')
+                    sys.exit(1)
+
             elif arg.startswith('-'):
                 if arg == '-a':
                     self.all = True
@@ -91,6 +95,10 @@ class ArgParser:
 
                 elif arg == '-v':
                     self.verbose = True
+
+                else:
+                    print(f'Error: unrecognized argument `{arg}`')
+                    sys.exit(1)
 
             else:
                 print(f'Error: unrecognized argument `{arg}`')

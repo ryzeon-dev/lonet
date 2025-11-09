@@ -55,9 +55,9 @@ if __name__ == '__main__':
                 print(interface.pretty())
             ip = interface.ipv4
 
-            localTcpAddressPorts = anyAddressTcpPorts.copy()
-
             print('  open ports: ')
+
+            localTcpAddressPorts = anyAddressTcpPorts.copy()
 
             if ip in tcpAddressPorts:
                 localTcpAddressPorts.update(tcpAddressPorts.get(ip))
@@ -97,30 +97,31 @@ if __name__ == '__main__':
         procInodes = processesInodes()
 
         print('ADDRESS         : PORT     PID -> NAME')
+        if args.protocol is None or args.protocol.lower() == 'tcp':
+            print('TCP')
+            for inode, (address, port) in tcpInodePorts.items():
+                process = procInodes.get(inode)
 
-        print('TCP')
-        for inode, (address, port) in tcpInodePorts.items():
-            process = procInodes.get(inode)
+                if process is not None:
+                    pid, name = process
 
-            if process is not None:
-                pid, name = process
+                    print(f'{address.ljust(15)} : {str(port).ljust(5)}    {pid} -> {name}')
 
-                print(f'{address.ljust(15)} : {str(port).ljust(5)}    {pid} -> {name}')
+                else:
+                    print(f'{address.ljust(15)} : {str(port).ljust(5)}')
 
-            else:
-                print(f'{address.ljust(15)} : {str(port).ljust(5)}')
+        if args.protocol is None or args.protocol.lower() == 'udp':
+            print('UDP')
+            for inode, (address, port) in udpInodePorts.items():
+                process = procInodes.get(inode)
 
-        print('UDP')
-        for inode, (address, port) in udpInodePorts.items():
-            process = procInodes.get(inode)
+                if process is not None:
+                    pid, name = process
 
-            if process is not None:
-                pid, name = process
+                    print(f'{address.ljust(15)} : {str(port).ljust(5)}    {pid} -> {name}')
 
-                print(f'{address.ljust(15)} : {str(port).ljust(5)}    {pid} -> {name}')
-
-            else:
-                print(f'{address.ljust(15)} : {str(port).ljust(5)}')
+                else:
+                    print(f'{address.ljust(15)} : {str(port).ljust(5)}')
 
     else:
         interfaces = getSystemInterfaces()
