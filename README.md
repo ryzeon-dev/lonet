@@ -12,7 +12,7 @@ Linux local network information tool written in Python and C++
 ## Install
 ### Install DEB package
 ```commandline
-wget link_to_deb && sudo dpkg -i ./lonet_*_amd64.deb 
+wget https://github.com/ryzeon-dev/lonet/releases/download/v1.1.0/lonet_1.1.0_amd64.deb && sudo dpkg -i ./lonet_*_amd64.deb 
 ```
 
 ### Compile from source
