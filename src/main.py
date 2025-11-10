@@ -1,9 +1,9 @@
 import sys
 
-from core import mapOpenPorts, getSystemInterfaces, processesInodes, TCP_ROUTES, UDP_ROUTES
+from core import mapOpenPorts, getSystemInterfaces, processesInodes, TCP_ROUTES, UDP_ROUTES, scanIpv4Routes
 from argparser import ArgParser
 
-VERSION = 'v1.0.0'
+VERSION = 'v1.1.0'
 
 if __name__ == '__main__':
     argv = sys.argv
@@ -15,12 +15,13 @@ if __name__ == '__main__':
         print('lonet: local network information tool')
         print('usage: lonet [OPTIONS]')
         print('options:')
-        print('    -a --all                Show network interfaces information and relative open ports')
+        print('    -a --all                Show all available information ')
         print('    -h --help               Show this message and exits')
         print('    -i --interfaces         Show network interfaces information')
         print('    -p --ports [tcp|udp]    Show open ports of specified protocol, if omitted show both')
-        print('    -virt                   Only show virtual network interfaces')
         print('    -phy                    Only show physical network interfaces')
+        print('    -virt                   Only show virtual network interfaces')
+        print('    -r --routes             Show system routes')
         print('    -v --verbose            Show verbose information')
         print('    -V --version            Show version number and exit')
         print('if no option is specified, shows concise information about network interfaces')
@@ -40,6 +41,8 @@ if __name__ == '__main__':
         anyAddressTcpPorts = tcpPorts if (tcpPorts := tcpAddressPorts.get('0.0.0.0')) is not None else set()
         anyAddressUdpPorts = udpPorts if (udpPorts := udpAddressPorts.get('0.0.0.0')) is not None else set()
 
+        ipv4Routes = scanIpv4Routes()
+
         for interface in interfaces:
             if args.virtual and not args.physical:
                 if interface.type == 'physical':
@@ -53,6 +56,7 @@ if __name__ == '__main__':
                 print(interface.verbose())
             else:
                 print(interface.pretty())
+
             ip = interface.ipv4
 
             print('  open ports: ')
@@ -68,6 +72,14 @@ if __name__ == '__main__':
             if ip in udpAddressPorts:
                 localUdpAddressPorts.update(udpAddressPorts.get(ip))
             print(f'    udp: {", ".join(str(p) for p in sorted(localUdpAddressPorts))}')
+
+            interfaceIPv4Routes = ipv4Routes.get(interface.name)
+
+            if interfaceIPv4Routes:
+                print('  routes:')
+                for route in interfaceIPv4Routes:
+                    from_, to_, flags = route
+                    print(f'    {from_} -> {to_} | flags: {", ".join(flags)}')
 
             print()
 
@@ -122,6 +134,18 @@ if __name__ == '__main__':
 
                 else:
                     print(f'{address.ljust(15)} : {str(port).ljust(5)}')
+
+    elif args.routes:
+        routes = scanIpv4Routes()
+
+        for interface, ifaceRoutes in routes.items():
+            print(interface)
+            for route in ifaceRoutes:
+                from_, to_, flags = route
+
+                print(f'  {from_} -> {to_}')
+                print(f'    flags: {", ".join(flags)}')
+            print()
 
     else:
         interfaces = getSystemInterfaces()

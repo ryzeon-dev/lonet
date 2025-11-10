@@ -9,6 +9,7 @@ class ArgParser:
         self.interfaces = False
         self.ports = False
         self.protocol = None
+        self.routes = False
         self.version = False
         self.verbose = False
 
@@ -56,6 +57,9 @@ class ArgParser:
                 elif arg == '--verbose':
                     self.verbose = True
 
+                elif arg == '--routes':
+                    self.routes = True
+
                 else:
                     print(f'Error: unrecognized argument `{arg}`')
                     sys.exit(1)
@@ -95,6 +99,9 @@ class ArgParser:
 
                 elif arg == '-v':
                     self.verbose = True
+
+                elif arg == '-r':
+                    self.routes = True
 
                 else:
                     print(f'Error: unrecognized argument `{arg}`')

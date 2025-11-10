@@ -2,6 +2,7 @@ import os
 from cpp_net_if_binding import CppNetIface
 
 ROUTES = '/proc/net/route'
+ROUTES6 = '/proc/net/route6'
 IFACES_DIR = '/sys/class/net/'
 VIRTUAL_IFACES_DIR = '/sys/devices/virtual/net/'
 
@@ -494,3 +495,52 @@ def mapOpenPorts(file):
         ports[inode] = (address, port)
 
     return ports, mapped
+
+### ROUTES ###
+
+def decodeRouteFlags(flags):
+    intFlags = int(flags, 16)
+    strFlags = []
+
+    flagsDefinitions = {
+        0x0001 : 'usable',
+        0x0002 : 'gateway',
+        0x0004 : 'host entry',
+        0x0008 : 'reinstate',
+        0x0010 : 'dynamic',
+        0x0020 : 'modified',
+        0x0040 : 'specific mtu',
+        0x0080 : 'window clamping',
+        0x0100 : 'irtt',
+        0x0200 : 'reject'
+    }
+
+    for bit, definition in flagsDefinitions.items():
+        if checkBit(intFlags, bit):
+            strFlags.append(definition)
+
+    return strFlags
+
+def scanRoutes(file, decodeIpFn):
+    routesFile = _tryRead(file)
+    splitRoutes = removeBlank(routesFile.split('\n')[1:])
+
+    routes = {
+        # interface : [(from, to, flags)]
+    }
+
+    for line in splitRoutes:
+        interface, fromHexAddress, toHexAddress, flags, *_ = line.strip().split('\t')
+        fromAddress = decodeIpFn(fromHexAddress)
+        toAddress = decodeIpFn(toHexAddress)
+        decodedFlags = decodeRouteFlags(flags)
+
+        if interface not in routes:
+            routes[interface] = []
+
+        routes[interface].append((fromAddress, toAddress, decodedFlags))
+
+    return routes
+
+def scanIpv4Routes():
+    return scanRoutes(ROUTES, reversedHexIpToIp)

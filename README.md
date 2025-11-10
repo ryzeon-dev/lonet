@@ -1,6 +1,6 @@
 <p align="center">
-<img alt="Version Badge" src="https://img.shields.io/badge/dev--version-v1.0.0-16a085">
-<img alt="Version Badge" src="https://img.shields.io/badge/release-v1.0.0-16a085">
+<img alt="Version Badge" src="https://img.shields.io/badge/dev--version-v1.1.0-16a085">
+<img alt="Version Badge" src="https://img.shields.io/badge/release-v1.1.0-16a085">
 <img alt="License Badge" src="https://img.shields.io/github/license/ryzeon-dev/bmdns?color=16a085">
 <img alt="Language Badge" src="https://img.shields.io/badge/python3-16a085?logo=python&logoColor=16a085&labelColor=5a5a5a">
 <img alt="Language Badge" src="https://img.shields.io/badge/c++-16a085?logo=cplusplus&logoColor=16a085&labelColor=5a5a5a">
@@ -10,7 +10,13 @@
 Linux local network information tool written in Python and C++
 
 ## Install
-run the installation script as root
+### Install DEB package
+```commandline
+wget link_to_deb && sudo dpkg -i ./lonet_*_amd64.deb 
+```
+
+### Compile from source
+run the compilation and installation script as root
 ```commandline
 sudo bash install.sh
 ```
