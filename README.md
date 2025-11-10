@@ -33,12 +33,14 @@ $ lonet --help
 lonet: local network information tool
 usage: lonet [OPTIONS]
 options:
-    -a --all                Shows network interfaces information and relative open ports
-    -h --help               Shows this message and exits
-    -i --interfaces         Shows network interfaces information
-    -p --ports [tcp|udp]    Shows open ports of specified protocol, if omitted shows both
-    -virt                   Only show virtual network interfaces
+    -a --all                Show all available information 
+    -h --help               Show this message and exits
+    -i --interfaces         Show network interfaces information
+    -p --ports [tcp|udp]    Show open ports of specified protocol, if omitted show both
     -phy                    Only show physical network interfaces
-    -V --version            Shows version number and exits
+    -virt                   Only show virtual network interfaces
+    -r --routes             Show system routes
+    -v --verbose            Show verbose information
+    -V --version            Show version number and exit
 if no option is specified, shows concise information about network interfaces
 ```
