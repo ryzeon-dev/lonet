@@ -5,7 +5,9 @@ class ArgParser:
         self.noArg = True
 
         self.all = False
+        self.arp = False
         self.help = False
+        self.interface = None
         self.interfaces = False
         self.ports = False
         self.protocol = None
@@ -37,6 +39,21 @@ class ArgParser:
                 elif arg == '--interfaces':
                     self.interfaces = True
 
+                elif arg == '--interface':
+                    nextIndex = index + 1
+
+                    if nextIndex >= len(args):
+                        print('Expecting interface name after `--inteface` option')
+                        sys.exit(1)
+
+                    index += 1
+                    arg = args[index]
+                    if arg.startswith('-'):
+                        print('Expecting interface name after `--inteface` option')
+                        sys.exit(1)
+
+                    self.interface = arg
+
                 elif arg == '--ports':
                     self.ports = True
 
@@ -60,6 +77,9 @@ class ArgParser:
                 elif arg == '--routes':
                     self.routes = True
 
+                elif arg == '--arp':
+                    self.arp = True
+
                 else:
                     print(f'Error: unrecognized argument `{arg}`')
                     sys.exit(1)
@@ -71,8 +91,24 @@ class ArgParser:
                 elif arg == '-h':
                     self.help = True
 
-                elif arg == '-i':
+                elif arg == '-I':
                     self.interfaces = True
+
+                elif arg == '-i':
+                    nextIndex = index + 1
+
+                    if nextIndex >= len(args):
+                        print('Expecting interface name after `-i` option')
+                        sys.exit(1)
+
+                    index += 1
+                    arg = args[index]
+
+                    if arg.startswith('-'):
+                        print('Expecting interface name after `-i` option')
+                        sys.exit(1)
+
+                    self.interface = arg
 
                 elif arg == '-p':
                     self.ports = True
@@ -102,6 +138,9 @@ class ArgParser:
 
                 elif arg == '-r':
                     self.routes = True
+
+                elif arg == '-A':
+                    self.arp = True
 
                 else:
                     print(f'Error: unrecognized argument `{arg}`')

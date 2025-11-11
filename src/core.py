@@ -11,6 +11,10 @@ UDP_ROUTES = '/proc/net/udp'
 
 PROC = '/proc'
 
+ARP_TABLE = '/proc/net/arp'
+
+IFACE_RATE = '/proc/net/dev'
+
 ### UTILS ###
 
 def _tryRead(path):
@@ -523,6 +527,9 @@ def decodeRouteFlags(flags):
 
 def scanRoutes(file, decodeIpFn):
     routesFile = _tryRead(file)
+    if routesFile is None:
+        return {}
+
     splitRoutes = removeBlank(routesFile.split('\n')[1:])
 
     routes = {
@@ -544,3 +551,96 @@ def scanRoutes(file, decodeIpFn):
 
 def scanIpv4Routes():
     return scanRoutes(ROUTES, reversedHexIpToIp)
+
+### ARP TABLE ###
+
+def decodeArpFlags(flags):
+    flagsDefinition = {
+        0x00 : 'uncomplete',
+        0x02 : 'complete',
+        0x04 : 'permanent',
+        0x08 : 'publish',
+        0x10 : 'requested trailers',
+        0x20 : 'use netmask',
+        0x40 : 'do not answer'
+    }
+
+    strFlags = []
+
+    for bit, definition in flagsDefinition.items():
+        if (bit == 0 and flags == 0) or (bit != 0 and checkBit(flags, bit)):
+            strFlags.append(definition)
+
+    return ', '.join(strFlags)
+
+def decodeHardwareType(type):
+    match type:
+        case 0:
+            return 'NET/ROM'
+
+        case 1:
+            return 'Ethernet'
+
+        case 2:
+            return 'Experimental Ethernet'
+
+        case 3:
+            return 'AX.25'
+
+        case 4:
+            return 'PROnet'
+
+        case 5:
+            return 'Chaosnet'
+
+        case 6:
+            return 'IEEE 802.2'
+
+        case 7:
+            return 'ARCnet'
+
+        case 8:
+            return 'APPLEtalk'
+
+        case 15:
+            return 'DLCI'
+
+        case 19:
+            return 'ATM'
+
+        case 23:
+            return 'Metricom'
+
+        case 24:
+            return 'IEEE 1394'
+
+        case 27:
+            return 'EUI-64'
+
+        case 32:
+            return 'InfiniBand'
+
+    return 'unknown'
+
+def readArpTable():
+    arpFile = _tryRead(ARP_TABLE)
+
+    if arpFile is None:
+        return {}
+
+    arpTable = {
+        # interface : [(ip, mac, type, flags)]
+    }
+
+    splitArpFile = arpFile.split('\n')[1:]
+    for line in splitArpFile:
+        ip, hwType, flags, mac, _, netIface = removeBlank(line.split(' '))
+
+        if netIface not in arpTable:
+            arpTable[netIface] = []
+
+        arpTable[netIface].append((
+            ip, mac, decodeHardwareType(int(hwType, 16)), decodeArpFlags(int(flags, 16))
+        ))
+
+    return arpTable

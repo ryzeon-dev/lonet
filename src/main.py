@@ -1,9 +1,89 @@
 import sys
-
-from core import mapOpenPorts, getSystemInterfaces, processesInodes, TCP_ROUTES, UDP_ROUTES, scanIpv4Routes
+from core import mapOpenPorts, getSystemInterfaces, processesInodes, TCP_ROUTES, UDP_ROUTES, scanIpv4Routes, readArpTable
 from argparser import ArgParser
 
-VERSION = 'v1.1.0'
+VERSION = 'v2.0.0'
+
+def printAllIfaceInfo(interface, args):
+    if args.virtual and not args.physical:
+        if interface.type == 'physical':
+            return
+
+    elif args.physical and not args.virtual:
+        if interface.type == 'virtual':
+            return
+
+    if args.verbose:
+        print(interface.verbose())
+    else:
+        print(interface.pretty())
+
+    ip = interface.ipv4
+
+    print('  open ports: ')
+
+    localTcpAddressPorts = anyAddressTcpPorts.copy()
+
+    if ip in tcpAddressPorts:
+        localTcpAddressPorts.update(tcpAddressPorts.get(ip))
+    print(f'    tcp: {", ".join(str(p) for p in sorted(localTcpAddressPorts))}')
+
+    localUdpAddressPorts = anyAddressUdpPorts.copy()
+
+    if ip in udpAddressPorts:
+        localUdpAddressPorts.update(udpAddressPorts.get(ip))
+    print(f'    udp: {", ".join(str(p) for p in sorted(localUdpAddressPorts))}')
+
+    interfaceIPv4Routes = ipv4Routes.get(interface.name)
+
+    if interfaceIPv4Routes:
+        print('  routes:')
+        for route in interfaceIPv4Routes:
+            from_, to_, flags = route
+            print(f'    {from_} -> {to_}')
+            print(f'      flags: {", ".join(flags)}')
+
+    relatedArpEntries = arpTable.get(interface.name)
+    if relatedArpEntries is not None:
+        print('  arp:')
+
+        for entry in relatedArpEntries:
+            ip, address, type, flags = entry
+            print(f'    {ip} -> {address}')
+            print(f'      type: {type}')
+            print(f'      flags: {flags}')
+
+def printRouteInfo(interface, ifaceRoutes):
+    print(interface)
+    for route in ifaceRoutes:
+        from_, to_, flags = route
+
+        print(f'  {from_} -> {to_}')
+        print(f'    flags: {", ".join(flags)}')
+
+def printArpEntries(interface, arpEntries):
+    print(f'interface {interface}:')
+
+    for entry in arpEntries:
+        ip, address, type, flags = entry
+        print(f'  {ip} -> {address}')
+        print(f'    type: {type}')
+        print(f'    flags: {flags}')
+
+def printIfaceInfo(interface, args):
+    if args.virtual and not args.physical:
+        if interface.type == 'physical':
+            return
+
+    elif args.physical and not args.virtual:
+        if interface.type == 'virtual':
+            return
+
+    if args.verbose:
+        print(interface.verbose())
+
+    else:
+        print(interface.concise())
 
 if __name__ == '__main__':
     argv = sys.argv
@@ -15,9 +95,11 @@ if __name__ == '__main__':
         print('lonet: local network information tool')
         print('usage: lonet [OPTIONS]')
         print('options:')
-        print('    -a --all                Show all available information ')
+        print('    -a --all                Show all available information')
+        print('    -A --arp                Show arp table')
         print('    -h --help               Show this message and exits')
-        print('    -i --interfaces         Show network interfaces information')
+        print('    -i --interface IFACE    Show information about requested interface')
+        print('    -I --interfaces         Show network interfaces information')
         print('    -p --ports [tcp|udp]    Show open ports of specified protocol, if omitted show both')
         print('    -phy                    Only show physical network interfaces')
         print('    -virt                   Only show virtual network interfaces')
@@ -42,50 +124,49 @@ if __name__ == '__main__':
         anyAddressUdpPorts = udpPorts if (udpPorts := udpAddressPorts.get('0.0.0.0')) is not None else set()
 
         ipv4Routes = scanIpv4Routes()
+        arpTable = readArpTable()
+
+        if (ifaceName := args.interface) is not None:
+            found = False
+
+            for interface in interfaces:
+                if interface.name == ifaceName:
+                    printAllIfaceInfo(interface, args)
+                    found = True
+                    break
+
+            if not found:
+                print(f'Error: interface `{ifaceName}` not found')
+                sys.exit(1)
+
+            sys.exit(0)
 
         for interface in interfaces:
-            if args.virtual and not args.physical:
-                if interface.type == 'physical':
-                    continue
-
-            elif args.physical and not args.virtual:
-                if interface.type == 'virtual':
-                    continue
-
-            if args.verbose:
-                print(interface.verbose())
-            else:
-                print(interface.pretty())
-
-            ip = interface.ipv4
-
-            print('  open ports: ')
-
-            localTcpAddressPorts = anyAddressTcpPorts.copy()
-
-            if ip in tcpAddressPorts:
-                localTcpAddressPorts.update(tcpAddressPorts.get(ip))
-            print(f'    tcp: {", ".join(str(p) for p in sorted(localTcpAddressPorts))}')
-
-            localUdpAddressPorts = anyAddressUdpPorts.copy()
-
-            if ip in udpAddressPorts:
-                localUdpAddressPorts.update(udpAddressPorts.get(ip))
-            print(f'    udp: {", ".join(str(p) for p in sorted(localUdpAddressPorts))}')
-
-            interfaceIPv4Routes = ipv4Routes.get(interface.name)
-
-            if interfaceIPv4Routes:
-                print('  routes:')
-                for route in interfaceIPv4Routes:
-                    from_, to_, flags = route
-                    print(f'    {from_} -> {to_} | flags: {", ".join(flags)}')
-
+            printAllIfaceInfo(interface, args)
             print()
 
     elif args.interfaces:
         interfaces = getSystemInterfaces()
         interfaces = sorted(interfaces, key=lambda x: x.ifIndex)
+
+        if (ifaceName := args.interface) is not None:
+            found = False
+
+            for interface in interfaces:
+                if interface.name == ifaceName:
+                    if args.verbose:
+                        print(interface.verbose())
+                    else:
+                        print(interface.pretty())
+
+                    found = True
+                    break
+
+            if not found:
+                print(f'Error: interface `{ifaceName}` not found')
+                sys.exit(1)
+
+            sys.exit(0)
 
         for interface in interfaces:
             if args.virtual and not args.physical:
@@ -138,31 +219,52 @@ if __name__ == '__main__':
     elif args.routes:
         routes = scanIpv4Routes()
 
-        for interface, ifaceRoutes in routes.items():
-            print(interface)
-            for route in ifaceRoutes:
-                from_, to_, flags = route
+        if (ifaceName := args.interface):
+            for interface, ifaceRoutes in routes.items():
+                if interface == ifaceName:
+                    printRouteInfo(interface, ifaceRoutes)
+                    break
 
-                print(f'  {from_} -> {to_}')
-                print(f'    flags: {", ".join(flags)}')
+            sys.exit(0)
+
+        for interface, ifaceRoutes in routes.items():
+            printRouteInfo(interface, ifaceRoutes)
+            print()
+
+    elif args.arp:
+        arpTable = readArpTable()
+
+        if (ifaceName := args.interface):
+            for interface, arpEntries in arpTable.items():
+                if interface == ifaceName:
+                    printArpEntries(interface, arpEntries)
+                    break
+
+            sys.exit(0)
+
+        for interface, arpEntries in arpTable.items():
+            printArpEntries(interface, arpEntries)
             print()
 
     else:
         interfaces = getSystemInterfaces()
         interfaces = sorted(interfaces, key=lambda x: x.ifIndex)
 
+        if (ifaceName := args.interface) is not None:
+            found = False
+
+            for interface in interfaces:
+                if interface.name == ifaceName:
+                    printIfaceInfo(interface, args)
+                    found = True
+                    break
+
+            if not found:
+                print(f'Error: interface `{ifaceName}` not found')
+                sys.exit(1)
+
+            sys.exit(0)
+
         for interface in interfaces:
-            if args.virtual and not args.physical:
-                if interface.type == 'physical':
-                    continue
-
-            elif args.physical and not args.virtual:
-                if interface.type == 'virtual':
-                    continue
-
-            if args.verbose:
-                print(interface.verbose())
-            else:
-                print(interface.concise())
-
+            printIfaceInfo(interface, args)
             print()
