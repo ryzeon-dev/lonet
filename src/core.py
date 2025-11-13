@@ -15,6 +15,8 @@ ARP_TABLE = '/proc/net/arp'
 
 IFACE_RATE = '/proc/net/dev'
 
+LOCALHOST_IP = '0.0.0.0'
+
 ### UTILS ###
 
 def _tryRead(path):
@@ -41,6 +43,13 @@ def reversedHexIpToIp(reversed):
         index -= 2
 
     return '.'.join(ipChunks)
+
+def reversedHexIpv6ToIpv6(reversed):
+    index = len(reversed)
+    ipChunks = []
+
+    for _ in range(6):
+        chunk = reversed
 
 def reversedHexU16ToInt(reversed):
     return int(reversed[0:2], 16) | int(reversed[2:4], 16) << 8
@@ -644,3 +653,51 @@ def readArpTable():
         ))
 
     return arpTable
+
+### OPEN CONNECTIONS ###
+
+class Connection:
+    def __init__(self, from_, to_, type, uid, inode):
+        splitFrom = from_.split(':')
+        splitTo = to_.split(':')
+
+        if len(splitFrom[0]) == 8:
+            self.fromAddress = reversedHexIpToIp(splitFrom[0])
+        self.fromPort = str(int(splitFrom[1], 16))
+
+        if len(splitTo[0]) == 8:
+            self.toAddress = reversedHexIpToIp(splitTo[0])
+        self.toPort = str(int(splitTo[1], 16))
+
+        self.type = str(int(type, 16))
+        self.uid = uid
+        self.inode = inode
+
+    def repr(self, indent=''):
+        repr = indent + f'{self.fromAddress}:{self.fromPort} -> {self.toAddress}:{self.toPort}'
+        repr += '\n' + indent + f'  type: {self.type} ; uid: {self.uid} : inode: {self.inode}'
+        return repr
+
+def parseConnectionsFile(filePath):
+    fileContent = _tryRead(filePath)
+    if fileContent is None:
+        return []
+
+    connections = []
+
+    for line in fileContent.split('\n')[1:]:
+        _, from_, to, type, _, _, _, uid, _, inode, *_ = removeBlank(line.split(' '))
+        connections.append(Connection(from_, to, type, uid, inode))
+
+    return connections
+
+def tcp4Connections():
+    return parseConnectionsFile(TCP_ROUTES)
+
+def udp4Connections():
+    return parseConnectionsFile(UDP_ROUTES)
+
+if __name__ == '__main__':
+    conns = parseConnectionsFile(UDP_ROUTES)
+    for conn in conns:
+        print(conn.repr())

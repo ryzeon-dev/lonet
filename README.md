@@ -1,6 +1,6 @@
 <p align="center">
-<img alt="Version Badge" src="https://img.shields.io/badge/dev--version-v2.0.0-16a085">
-<img alt="Version Badge" src="https://img.shields.io/badge/release-v2.0.0-16a085">
+<img alt="Version Badge" src="https://img.shields.io/badge/dev--version-v2.1.0-16a085">
+<img alt="Version Badge" src="https://img.shields.io/badge/release-v2.1.0-16a085">
 <img alt="License Badge" src="https://img.shields.io/github/license/ryzeon-dev/bmdns?color=16a085">
 <img alt="Language Badge" src="https://img.shields.io/badge/python3-16a085?logo=python&logoColor=16a085&labelColor=5a5a5a">
 <img alt="Language Badge" src="https://img.shields.io/badge/c++-16a085?logo=cplusplus&logoColor=16a085&labelColor=5a5a5a">
@@ -12,7 +12,7 @@ Linux local network information tool written in Python and C++
 ## Install
 ### Install DEB package
 ```commandline
-wget https://github.com/ryzeon-dev/lonet/releases/download/v2.0.0/lonet_2.0.0_amd64.deb && sudo dpkg -i ./lonet_*_amd64.deb 
+wget https://github.com/ryzeon-dev/lonet/releases/download/v2.1.0/lonet_2.1.0_amd64.deb && sudo dpkg -i ./lonet_*_amd64.deb 
 ```
 
 ### Compile from source
@@ -38,6 +38,7 @@ options:
     -h --help               Show this message and exits
     -i --interface IFACE    Show information about requested interface
     -I --interfaces         Show network interfaces information
+    -O --open-connections   Show open connections (IPv4 only)
     -p --ports [tcp|udp]    Show open ports of specified protocol, if omitted show both
     -phy                    Only show physical network interfaces
     -virt                   Only show virtual network interfaces

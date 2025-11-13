@@ -1,8 +1,11 @@
 import sys
-from core import mapOpenPorts, getSystemInterfaces, processesInodes, TCP_ROUTES, UDP_ROUTES, scanIpv4Routes, readArpTable
+from core import (
+    mapOpenPorts, getSystemInterfaces, processesInodes, TCP_ROUTES, UDP_ROUTES, scanIpv4Routes, readArpTable,
+    tcp4Connections, udp4Connections, LOCALHOST_IP
+)
 from argparser import ArgParser
 
-VERSION = 'v2.0.0'
+VERSION = 'v2.1.0'
 
 def printAllIfaceInfo(interface, args):
     if args.virtual and not args.physical:
@@ -100,6 +103,7 @@ if __name__ == '__main__':
         print('    -h --help               Show this message and exits')
         print('    -i --interface IFACE    Show information about requested interface')
         print('    -I --interfaces         Show network interfaces information')
+        print('    -O --open-connections   Show open connections (IPv4 only)')
         print('    -p --ports [tcp|udp]    Show open ports of specified protocol, if omitted show both')
         print('    -phy                    Only show physical network interfaces')
         print('    -virt                   Only show virtual network interfaces')
@@ -245,6 +249,20 @@ if __name__ == '__main__':
         for interface, arpEntries in arpTable.items():
             printArpEntries(interface, arpEntries)
             print()
+
+    elif args.openConnections:
+        tcpOpenConnections = tcp4Connections()
+        udpOpenConnections = udp4Connections()
+
+        print('TCP')
+        for connection in tcpOpenConnections:
+            if connection.toAddress != LOCALHOST_IP:
+                print(connection.repr())
+
+        print('UDP')
+        for connection in udpOpenConnections:
+            if connection.toAddress != LOCALHOST_IP:
+                print(connection.repr())
 
     else:
         interfaces = getSystemInterfaces()
