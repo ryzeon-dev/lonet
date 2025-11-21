@@ -1,92 +1,227 @@
 import sys
+import json
+
 from core import (
     mapOpenPorts, getSystemInterfaces, processesInodes, TCP_ROUTES, UDP_ROUTES, scanIpv4Routes, readArpTable,
     tcp4Connections, udp4Connections, LOCALHOST_IP
 )
 from argparser import ArgParser
 
-VERSION = 'v2.1.0'
+VERSION = 'v2.2.0'
 
 def printAllIfaceInfo(interface, args):
+    jfmt = {}
     if args.virtual and not args.physical:
         if interface.type == 'physical':
-            return
+            return False, {}
 
     elif args.physical and not args.virtual:
         if interface.type == 'virtual':
-            return
+            return False, {}
 
     if args.verbose:
-        print(interface.verbose())
+        if args.json:
+            jfmt = interface.jsonVerbose()
+
+        else:
+            print(interface.verbose())
     else:
-        print(interface.pretty())
+        if args.json:
+            jfmt = interface.jsonPretty()
+
+        else:
+            print(interface.pretty())
 
     ip = interface.ipv4
 
-    print('  open ports: ')
+    if args.json:
+        jfmt['open_ports'] = {}
+    else:
+        print('  open ports: ')
+
+    tcpInodePorts, tcpAddressPorts = mapOpenPorts(TCP_ROUTES)
+    udpInodePorts, udpAddressPorts = mapOpenPorts(UDP_ROUTES)
+
+    anyAddressTcpPorts = tcpPorts if (tcpPorts := tcpAddressPorts.get('0.0.0.0')) is not None else set()
+    anyAddressUdpPorts = udpPorts if (udpPorts := udpAddressPorts.get('0.0.0.0')) is not None else set()
 
     localTcpAddressPorts = anyAddressTcpPorts.copy()
 
     if ip in tcpAddressPorts:
         localTcpAddressPorts.update(tcpAddressPorts.get(ip))
-    print(f'    tcp: {", ".join(str(p) for p in sorted(localTcpAddressPorts))}')
+
+    if args.json:
+        jfmt['open_ports']['tcp'] = sorted(localTcpAddressPorts)
+    else:
+        print(f'    tcp: {", ".join(str(p) for p in sorted(localTcpAddressPorts))}')
 
     localUdpAddressPorts = anyAddressUdpPorts.copy()
 
     if ip in udpAddressPorts:
         localUdpAddressPorts.update(udpAddressPorts.get(ip))
-    print(f'    udp: {", ".join(str(p) for p in sorted(localUdpAddressPorts))}')
+
+    if args.json:
+        jfmt['open_ports']['udp'] = sorted(localUdpAddressPorts)
+    else:
+        print(f'    udp: {", ".join(str(p) for p in sorted(localUdpAddressPorts))}')
+    ipv4Routes = scanIpv4Routes()
 
     interfaceIPv4Routes = ipv4Routes.get(interface.name)
 
+    if args.json:
+        jfmt['routes'] = []
+
     if interfaceIPv4Routes:
-        print('  routes:')
+        if not args.json:
+            print('  routes:')
+
         for route in interfaceIPv4Routes:
             from_, to_, flags = route
-            print(f'    {from_} -> {to_}')
-            print(f'      flags: {", ".join(flags)}')
 
+            if args.json:
+                jfmt['routes'].append({
+                    'from' : from_,
+                    'to' : to_,
+                    'flags': flags
+                })
+            else:
+                print(f'    {from_} -> {to_}')
+                print(f'      flags: {", ".join(flags)}')
+
+    arpTable = readArpTable()
     relatedArpEntries = arpTable.get(interface.name)
+
+    if args.json:
+        jfmt['arp_table'] = []
+
     if relatedArpEntries is not None:
-        print('  arp:')
+        if not args.json:
+            print('  arp:')
 
         for entry in relatedArpEntries:
             ip, address, type, flags = entry
-            print(f'    {ip} -> {address}')
-            print(f'      type: {type}')
-            print(f'      flags: {flags}')
 
-def printRouteInfo(interface, ifaceRoutes):
-    print(interface)
+            if args.json:
+                jfmt['arp_table'].append({
+                    'ip': ip,
+                    'address' : address,
+                    'type' : type,
+                    'flags' : flags
+                })
+            else:
+                print(f'    {ip} -> {address}')
+                print(f'      type: {type}')
+                print(f'      flags: {flags}')
+
+    return True, jfmt
+
+def printRouteInfo(interface, ifaceRoutes, args):
+    jfmt = []
+    if not args.json:
+        print(interface)
+
     for route in ifaceRoutes:
         from_, to_, flags = route
 
-        print(f'  {from_} -> {to_}')
-        print(f'    flags: {", ".join(flags)}')
+        if args.json:
+            jfmt.append({
+                'from' : from_,
+                'to' : to_,
+                'flags' : flags
+            })
 
-def printArpEntries(interface, arpEntries):
-    print(f'interface {interface}:')
+        else:
+            print(f'  {from_} -> {to_}')
+            print(f'    flags: {", ".join(flags)}')
+
+    return jfmt
+
+def printArpEntries(interface, arpEntries, args):
+    jfmt = []
+
+    if not args.json:
+        print(f'interface {interface}:')
 
     for entry in arpEntries:
         ip, address, type, flags = entry
-        print(f'  {ip} -> {address}')
-        print(f'    type: {type}')
-        print(f'    flags: {flags}')
+
+        if args.json:
+            jfmt.append({
+                'ip' : ip,
+                'address' : address,
+                'type' : type,
+                'flags': flags.split(', ')
+            })
+
+        else:
+            print(f'  {ip} -> {address}')
+            print(f'    type: {type}')
+            print(f'    flags: {flags}')
+
+    if args.json:
+        return jfmt
 
 def printIfaceInfo(interface, args):
+    jfmt = {}
+
     if args.virtual and not args.physical:
         if interface.type == 'physical':
-            return
+            return False, {}
 
     elif args.physical and not args.virtual:
         if interface.type == 'virtual':
-            return
+            return False, {}
 
     if args.verbose:
-        print(interface.verbose())
+        if args.json:
+            jfmt = interface.jsonVerbose()
+        else:
+            print(interface.verbose())
 
     else:
-        print(interface.concise())
+        if args.json:
+            jfmt = interface.jsonConcise()
+        else:
+            print(interface.concise())
+
+    return True, jfmt
+
+def all(args):
+    jfmt = {}
+
+    interfaces = getSystemInterfaces()
+    interfaces = sorted(interfaces, key=lambda x: x.ifIndex)
+
+    if (ifaceName := args.interface) is not None:
+        found = False
+
+        for interface in interfaces:
+            if interface.name == ifaceName:
+                ok, jInfo = printAllIfaceInfo(interface, args)
+
+                if args.json:
+                    jfmt[interface.name] = jInfo
+                found = True
+                break
+
+        if not found:
+            print(f'Error: interface `{ifaceName}` not found')
+            sys.exit(1)
+
+        print(json.dumps(jfmt))
+        sys.exit(0)
+
+    for interface in interfaces:
+        ok, jInfo = printAllIfaceInfo(interface, args)
+
+        if args.json:
+            jfmt[interface.name] = jInfo
+
+        else:
+            if ok:
+                print()
+
+    print(json.dumps(jfmt))
 
 if __name__ == '__main__':
     argv = sys.argv
@@ -103,6 +238,7 @@ if __name__ == '__main__':
         print('    -h --help               Show this message and exits')
         print('    -i --interface IFACE    Show information about requested interface')
         print('    -I --interfaces         Show network interfaces information')
+        print('    -j --json               Use JSON output')
         print('    -O --open-connections   Show open connections (IPv4 only)')
         print('    -p --ports [tcp|udp]    Show open ports of specified protocol, if omitted show both')
         print('    -phy                    Only show physical network interfaces')
@@ -118,36 +254,7 @@ if __name__ == '__main__':
         sys.exit(0)
 
     if args.all:
-        interfaces = getSystemInterfaces()
-        interfaces = sorted(interfaces, key=lambda x: x.ifIndex)
-
-        tcpInodePorts, tcpAddressPorts = mapOpenPorts(TCP_ROUTES)
-        udpInodePorts, udpAddressPorts = mapOpenPorts(UDP_ROUTES)
-
-        anyAddressTcpPorts = tcpPorts if (tcpPorts := tcpAddressPorts.get('0.0.0.0')) is not None else set()
-        anyAddressUdpPorts = udpPorts if (udpPorts := udpAddressPorts.get('0.0.0.0')) is not None else set()
-
-        ipv4Routes = scanIpv4Routes()
-        arpTable = readArpTable()
-
-        if (ifaceName := args.interface) is not None:
-            found = False
-
-            for interface in interfaces:
-                if interface.name == ifaceName:
-                    printAllIfaceInfo(interface, args)
-                    found = True
-                    break
-
-            if not found:
-                print(f'Error: interface `{ifaceName}` not found')
-                sys.exit(1)
-
-            sys.exit(0)
-
-        for interface in interfaces:
-            printAllIfaceInfo(interface, args)
-            print()
+        all(args)
 
     elif args.interfaces:
         interfaces = getSystemInterfaces()
@@ -158,10 +265,22 @@ if __name__ == '__main__':
 
             for interface in interfaces:
                 if interface.name == ifaceName:
+
                     if args.verbose:
-                        print(interface.verbose())
+                        if args.json:
+                            print(json.dumps({
+                                interface.name : interface.jsonVerbose()
+                            }))
+                        else:
+                            print(interface.verbose())
+
                     else:
-                        print(interface.pretty())
+                        if args.json:
+                            print(json.dumps({
+                                interface.name: interface.jsonPretty()
+                            }))
+                        else:
+                            print(interface.verbose())
 
                     found = True
                     break
@@ -172,6 +291,7 @@ if __name__ == '__main__':
 
             sys.exit(0)
 
+        jfmt = {}
         for interface in interfaces:
             if args.virtual and not args.physical:
                 if interface.type == 'physical':
@@ -182,89 +302,198 @@ if __name__ == '__main__':
                     continue
 
             if args.verbose:
-                print(interface.verbose())
+                if args.json:
+                    jfmt[interface.name] = interface.jsonVerbose()
+                else:
+                    print(interface.verbose())
+
             else:
-                print(interface.pretty())
-            print()
+                if args.json:
+                    jfmt[interface.name] = interface.jsonPretty()
+                else:
+                    print(interface.verbose())
+
+            if not args.json:
+                print()
+
+        if args.json:
+            print(json.dumps(jfmt))
 
     elif args.ports:
+        jfmt = {}
         tcpInodePorts, _ = mapOpenPorts(TCP_ROUTES)
         udpInodePorts, _ = mapOpenPorts(UDP_ROUTES)
 
         procInodes = processesInodes()
 
-        print('ADDRESS         : PORT     PID -> NAME')
+        if not args.json:
+            print('ADDRESS         : PORT     PID -> NAME')
+
         if args.protocol is None or args.protocol.lower() == 'tcp':
-            print('TCP')
+            if args.json:
+                jfmt['tcp'] = []
+            else:
+                print('TCP')
+
             for inode, (address, port) in tcpInodePorts.items():
                 process = procInodes.get(inode)
 
                 if process is not None:
                     pid, name = process
 
-                    print(f'{address.ljust(15)} : {str(port).ljust(5)}    {pid} -> {name}')
+                    if args.json:
+                        jfmt['tcp'].append({
+                            'address' : address,
+                            'port' : port,
+                            'pid' : pid,
+                            'process_name' : name
+                        })
+                    else:
+                        print(f'{address.ljust(15)} : {str(port).ljust(5)}    {pid} -> {name}')
 
                 else:
-                    print(f'{address.ljust(15)} : {str(port).ljust(5)}')
+                    if args.json:
+                        jfmt['tcp'].append({
+                            'address': address,
+                            'port': port,
+                            'pid': None,
+                            'process_name': None
+                        })
+                    else:
+                        print(f'{address.ljust(15)} : {str(port).ljust(5)}')
 
         if args.protocol is None or args.protocol.lower() == 'udp':
-            print('UDP')
+            if args.json:
+                jfmt['udp'] = []
+            else:
+                print('UDP')
+
             for inode, (address, port) in udpInodePorts.items():
                 process = procInodes.get(inode)
 
                 if process is not None:
                     pid, name = process
 
-                    print(f'{address.ljust(15)} : {str(port).ljust(5)}    {pid} -> {name}')
+                    if args.json:
+                        jfmt['udp'].append({
+                            'address': address,
+                            'port': port,
+                            'pid': pid,
+                            'process_name': name
+                        })
+                    else:
+                        print(f'{address.ljust(15)} : {str(port).ljust(5)}    {pid} -> {name}')
 
                 else:
-                    print(f'{address.ljust(15)} : {str(port).ljust(5)}')
+                    if args.json:
+                        jfmt['udp'].append({
+                            'address': address,
+                            'port': port,
+                            'pid': None,
+                            'process_name': None
+                        })
+                    else:
+                        print(f'{address.ljust(15)} : {str(port).ljust(5)}')
+
+        if args.json:
+            print(json.dumps(jfmt))
 
     elif args.routes:
+        jfmt = {}
         routes = scanIpv4Routes()
 
         if (ifaceName := args.interface):
             for interface, ifaceRoutes in routes.items():
                 if interface == ifaceName:
-                    printRouteInfo(interface, ifaceRoutes)
+                    ifaceRoutes = printRouteInfo(interface, ifaceRoutes, args)
+
+                    if args.json:
+                        jfmt[ifaceName] = ifaceRoutes
+
                     break
+
+            if args.json:
+                print(json.dumps(jfmt))
 
             sys.exit(0)
 
         for interface, ifaceRoutes in routes.items():
-            printRouteInfo(interface, ifaceRoutes)
-            print()
+            routeInfo = printRouteInfo(interface, ifaceRoutes, args)
+
+            if args.json:
+                jfmt[interface] = routeInfo
+            else:
+                print()
+
+        if args.json:
+            print(json.dumps(jfmt))
 
     elif args.arp:
+        jfmt = {}
         arpTable = readArpTable()
 
         if (ifaceName := args.interface):
             for interface, arpEntries in arpTable.items():
                 if interface == ifaceName:
-                    printArpEntries(interface, arpEntries)
+                    arpEntries = printArpEntries(interface, arpEntries, args)
+
+                    if args.json:
+                        jfmt[ifaceName] = arpEntries
+
                     break
+
+            if args.json:
+                print(json.dumps(jfmt))
 
             sys.exit(0)
 
         for interface, arpEntries in arpTable.items():
-            printArpEntries(interface, arpEntries)
-            print()
+            arpEntries = printArpEntries(interface, arpEntries, args)
+
+            if args.json:
+                jfmt[interface] = arpEntries
+            else:
+                print()
+
+        if args.json:
+            print(json.dumps(jfmt))
 
     elif args.openConnections:
+        jfmt = {}
+
         tcpOpenConnections = tcp4Connections()
         udpOpenConnections = udp4Connections()
 
-        print('TCP')
+        if args.json:
+            jfmt['tcp'] = []
+        else:
+            print('TCP')
+
         for connection in tcpOpenConnections:
             if connection.toAddress != LOCALHOST_IP:
-                print(connection.repr())
+                if args.json:
+                    jfmt['tcp'].append(connection.json())
+                else:
+                    print(connection.repr())
 
-        print('UDP')
+        if args.json:
+            jfmt['udp'] = []
+        else:
+            print('UDP')
+
         for connection in udpOpenConnections:
             if connection.toAddress != LOCALHOST_IP:
-                print(connection.repr())
+                if args.json:
+                    jfmt['udp'].append(connection.json())
+                else:
+                    print(connection.repr())
+
+        if args.json:
+            print(json.dumps(jfmt))
 
     else:
+        jfmt = {}
+
         interfaces = getSystemInterfaces()
         interfaces = sorted(interfaces, key=lambda x: x.ifIndex)
 
@@ -273,16 +502,32 @@ if __name__ == '__main__':
 
             for interface in interfaces:
                 if interface.name == ifaceName:
-                    printIfaceInfo(interface, args)
+                    ok, jInfo = printIfaceInfo(interface, args)
+
+                    if ok:
+                        jfmt[interface.name] = jInfo
+
                     found = True
                     break
 
-            if not found:
+            if found:
+                if args.json:
+                    print(json.dumps(jfmt))
+
+            else:
                 print(f'Error: interface `{ifaceName}` not found')
                 sys.exit(1)
 
             sys.exit(0)
 
         for interface in interfaces:
-            printIfaceInfo(interface, args)
-            print()
+            ok, jInfo = printIfaceInfo(interface, args)
+
+            if ok:
+                if args.json:
+                    jfmt[interface.name] = jInfo
+                else:
+                    print()
+
+        if args.json:
+            print(json.dumps(jfmt))

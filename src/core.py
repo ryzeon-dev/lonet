@@ -17,6 +17,20 @@ IFACE_RATE = '/proc/net/dev'
 
 LOCALHOST_IP = '0.0.0.0'
 
+_macAssignmentTypes = {
+    '0' : 'permanent',
+    '1' : 'random',
+    '2' : 'stolen',
+    '3' : 'manual'
+}
+
+_nameAssignmentTypes = {
+    '1' : 'kernel (unpredictable)',
+    '2' : 'kernel (predictable)',
+    '3' : 'userspace',
+    '4' : 'renamed'
+}
+
 ### UTILS ###
 
 def _tryRead(path):
@@ -26,15 +40,15 @@ def _tryRead(path):
     except:
         return None
 
-def checkBit(flags, bit):
+def _checkBit(flags, bit):
     return (flags & bit) == bit
 
-def removeBlank(list):
+def _removeBlank(list):
     while '' in list:
         list.remove('')
     return list
 
-def reversedHexIpToIp(reversed):
+def _reversedHexIpToIp(reversed):
     index = len(reversed)
     ipChunks = []
 
@@ -44,17 +58,17 @@ def reversedHexIpToIp(reversed):
 
     return '.'.join(ipChunks)
 
-def reversedHexIpv6ToIpv6(reversed):
+def _reversedHexIpv6ToIpv6(reversed):
     index = len(reversed)
     ipChunks = []
 
     for _ in range(6):
         chunk = reversed
 
-def reversedHexU16ToInt(reversed):
+def _reversedHexU16ToInt(reversed):
     return int(reversed[0:2], 16) | int(reversed[2:4], 16) << 8
 
-def ipToU32(ip):
+def _ipToU32(ip):
     chunks = ip.split('.')[::-1]
     u32 = 0
 
@@ -63,17 +77,17 @@ def ipToU32(ip):
 
     return u32
 
-def mask4ToCidr(mask):
-    u32Mask = ipToU32(mask)
+def _mask4ToCidr(mask):
+    u32Mask = _ipToU32(mask)
     cidr = 0
 
     for i in range(32):
-        if checkBit(u32Mask, 1 << i):
+        if _checkBit(u32Mask, 1 << i):
             cidr += 1
 
     return cidr
 
-def mask6ToCidr(mask):
+def _mask6ToCidr(mask):
     netBits = 0
     chunks = mask.split(':')
 
@@ -83,7 +97,7 @@ def mask6ToCidr(mask):
 
         u16Chunk = int(chunk, 16)
         for i in range(16):
-            if checkBit(u16Chunk, 1 << i):
+            if _checkBit(u16Chunk, 1 << i):
                 netBits += 1
 
     return netBits
@@ -98,6 +112,7 @@ class NetworkInterface:
         self.name = None
         self.nameAssignment = None
         self.mac = None
+        self.macAssignmentType = None
         self.mtu = None
         self.state = None
         self.physicalLink = None
@@ -133,19 +148,15 @@ class NetworkInterface:
         self.name = self.sysFsPath.split('/')[-1]
 
         nameAssignment = _tryRead(os.path.join(self.sysFsPath, 'name_assign_type'))
-        if nameAssignment == '1':
-            self.nameAssignment = 'kernel (unpredictable)'
-
-        elif nameAssignment == '2':
-            self.nameAssignment = 'kernel (predictable)'
-
-        elif nameAssignment == '3':
-            self.nameAssignment = 'userspace'
-
-        elif nameAssignment == '4':
-            self.nameAssignment = 'renamed'
+        if nameAssignment is not None:
+            self.nameAssignment = _nameAssignmentTypes.get(nameAssignment)
 
         self.mac = _tryRead(os.path.join(self.sysFsPath, 'address'))
+        self.macAssignmentType = _tryRead(os.path.join(self.sysFsPath, 'addr_assign_type'))
+
+        if self.macAssignmentType is not None:
+            self.macAssignmentType = _macAssignmentTypes.get(self.macAssignmentType)
+
         self.mtu = _tryRead(os.path.join(self.sysFsPath, 'mtu'))
 
         self.state = _tryRead(os.path.join(self.sysFsPath, 'operstate'))
@@ -203,78 +214,81 @@ class NetworkInterface:
         self.netmask4 = ipInfo.netmask4
 
         if self.netmask4:
-            self.cidr4 = mask4ToCidr(self.netmask4)
+            self.cidr4 = _mask4ToCidr(self.netmask4)
 
         self.ipv6 = ipInfo.ipv6
         self.netmask6 = ipInfo.netmask6
 
         if self.netmask6:
-            self.cidr6 = mask6ToCidr(self.netmask6)
+            self.cidr6 = _mask6ToCidr(self.netmask6)
 
         self.ifIndex = ipInfo.ifIndex
 
-    def decodeFlags(self):
+    def decodeFlags(self, wantList=False):
         if not isinstance(self.flags, int):
             return ''
 
         strFlags = []
 
-        if checkBit(self.flags, 1 << 0):
+        if _checkBit(self.flags, 1 << 0):
             strFlags.append('up')
 
-        if checkBit(self.flags, 1 << 1):
+        if _checkBit(self.flags, 1 << 1):
             strFlags.append('broadcast')
 
-        if checkBit(self.flags, 1 << 2):
+        if _checkBit(self.flags, 1 << 2):
             strFlags.append('debug')
 
-        if checkBit(self.flags, 1 << 3):
+        if _checkBit(self.flags, 1 << 3):
             strFlags.append('lookpack')
 
-        if checkBit(self.flags, 1 << 4):
+        if _checkBit(self.flags, 1 << 4):
             strFlags.append('point to point')
 
-        if checkBit(self.flags, 1 << 5):
+        if _checkBit(self.flags, 1 << 5):
             strFlags.append('no trailers')
 
-        if checkBit(self.flags, 1 << 6):
+        if _checkBit(self.flags, 1 << 6):
             strFlags.append('running')
 
-        if checkBit(self.flags, 1 << 7):
+        if _checkBit(self.flags, 1 << 7):
             strFlags.append('no arp')
 
-        if checkBit(self.flags, 1 << 8):
+        if _checkBit(self.flags, 1 << 8):
             strFlags.append('promisc')
 
-        if checkBit(self.flags, 1 << 9):
+        if _checkBit(self.flags, 1 << 9):
             strFlags.append('all multi')
 
-        if checkBit(self.flags, 1 << 10):
+        if _checkBit(self.flags, 1 << 10):
             strFlags.append('master')
 
-        if checkBit(self.flags, 1 << 11):
+        if _checkBit(self.flags, 1 << 11):
             strFlags.append('slave')
 
-        if checkBit(self.flags, 1 << 12):
+        if _checkBit(self.flags, 1 << 12):
             strFlags.append('multicast')
 
-        if checkBit(self.flags, 1 << 13):
+        if _checkBit(self.flags, 1 << 13):
             strFlags.append('portsel')
 
-        if checkBit(self.flags, 1 << 14):
+        if _checkBit(self.flags, 1 << 14):
             strFlags.append('automedia')
 
-        if checkBit(self.flags, 1 << 15):
+        if _checkBit(self.flags, 1 << 15):
             strFlags.append('dynamic')
 
-        if checkBit(self.flags, 1 << 16):
+        if _checkBit(self.flags, 1 << 16):
             strFlags.append('lower up')
 
-        if checkBit(self.flags, 1 << 17):
+        if _checkBit(self.flags, 1 << 17):
             strFlags.append('dormant')
 
-        if checkBit(self.flags, 1 << 18):
+        if _checkBit(self.flags, 1 << 18):
             strFlags.append('echo')
+
+        if wantList:
+            return strFlags
 
         return ', '.join(strFlags)
 
@@ -282,8 +296,6 @@ class NetworkInterface:
         return f'NetworkInterface( {self.name} [{self.mac}] ; type: {self.type} ; state: {self.state} ; speed: {self.speed} ; mtu: {self.mtu} ; flags: {self.decodeFlags()} )'
 
     def pretty(self):
-        # self.completeIpConfiguration()
-
         repr = f'{self.name} : {self.type} interface'
 
         if self.alias:
@@ -291,6 +303,9 @@ class NetworkInterface:
 
         if self.mac:
             repr += f'\n  mac: {self.mac}'
+
+            if self.macAssignmentType:
+                repr += f'\n    assignment: {self.macAssignmentType}'
 
         if self.ifIndex is not None:
             repr += f'\n  index: {self.ifIndex}'
@@ -350,8 +365,6 @@ class NetworkInterface:
         return fmt
 
     def verbose(self):
-        # self.completeIpConfiguration()
-
         repr = f'{self.name} : {self.type} interface'
 
         if self.nameAssignment:
@@ -362,6 +375,9 @@ class NetworkInterface:
 
         if self.mac:
             repr += f'\n  mac: {self.mac}'
+
+            if self.macAssignmentType:
+                repr += f'\n    assignment: {self.macAssignmentType}'
 
         if self.ifIndex is not None:
             repr += f'\n  index: {self.ifIndex}'
@@ -409,6 +425,57 @@ class NetworkInterface:
             repr += f'\n  flags: {self.decodeFlags()}'
 
         return repr
+
+    def jsonPretty(self):
+        return {
+            'type' : self.type,
+            'alias' : self.alias,
+            'mac' : self.mac,
+            'ifindex' : self.ifIndex,
+            'ipv4' : self.ipv4,
+            'netmask4' : self.netmask4,
+            'ipv6' : self.ipv6,
+            'netmask6' : self.netmask6,
+            'mtu' : self.mtu,
+            'speed' : self.speed,
+            'state' : self.state,
+            'duplex' : self.duplex,
+            'flags' : self.decodeFlags(wantList=True)
+        }
+
+    def jsonConcise(self):
+        return {
+            'type' : self.type,
+            'mac' : self.mac,
+            'ipv4' : self.ipv4 if self.cidr4 is None else f'{self.ipv4}/{self.cidr4}',
+            'ipv6' : self.ipv6 if self.cidr6 is None else f'{self.ipv6}/{self.cidr6}',
+            'state' : self.state,
+            'speed' : self.speed
+        }
+
+    def jsonVerbose(self):
+        return {
+            'type': self.type,
+            'name_assignment' : self.nameAssignment,
+            'alias': self.alias,
+            'mac': self.mac,
+            'mac_assignment' : self.macAssignmentType,
+            'ifindex': self.ifIndex,
+            'ipv4': self.ipv4,
+            'netmask4': self.netmask4,
+            'ipv6': self.ipv6,
+            'netmask6': self.netmask6,
+            'mtu': self.mtu,
+            'speed': self.speed,
+            'state': self.state,
+            'physical_link' : self.physicalLink,
+            'dev_id' : self.devId,
+            'dev_port' : self.devPort,
+            'phys_port_id' : self.physPortId,
+            'phys_port_name' : self.physPortName,
+            'duplex': self.duplex,
+            'flags': self.decodeFlags(wantList=True)
+        }
 
 def getSystemInterfaces():
     try:
@@ -488,7 +555,7 @@ def mapOpenPorts(file):
     }
 
     for line in openPorts.split('\n')[1:]:
-        chunks = removeBlank(line.strip().split(' '))
+        chunks = _removeBlank(line.strip().split(' '))
 
         if chunks[3] not in  ('0A', '07'):
             continue
@@ -496,7 +563,7 @@ def mapOpenPorts(file):
         source = chunks[1]
         address, port = source.split(':')
 
-        address = reversedHexIpToIp(address)
+        address = _reversedHexIpToIp(address)
         port = int(port, 16)
 
         if address not in mapped:
@@ -529,7 +596,7 @@ def decodeRouteFlags(flags):
     }
 
     for bit, definition in flagsDefinitions.items():
-        if checkBit(intFlags, bit):
+        if _checkBit(intFlags, bit):
             strFlags.append(definition)
 
     return strFlags
@@ -539,7 +606,7 @@ def scanRoutes(file, decodeIpFn):
     if routesFile is None:
         return {}
 
-    splitRoutes = removeBlank(routesFile.split('\n')[1:])
+    splitRoutes = _removeBlank(routesFile.split('\n')[1:])
 
     routes = {
         # interface : [(from, to, flags)]
@@ -559,7 +626,7 @@ def scanRoutes(file, decodeIpFn):
     return routes
 
 def scanIpv4Routes():
-    return scanRoutes(ROUTES, reversedHexIpToIp)
+    return scanRoutes(ROUTES, _reversedHexIpToIp)
 
 ### ARP TABLE ###
 
@@ -577,7 +644,7 @@ def decodeArpFlags(flags):
     strFlags = []
 
     for bit, definition in flagsDefinition.items():
-        if (bit == 0 and flags == 0) or (bit != 0 and checkBit(flags, bit)):
+        if (bit == 0 and flags == 0) or (bit != 0 and _checkBit(flags, bit)):
             strFlags.append(definition)
 
     return ', '.join(strFlags)
@@ -643,7 +710,7 @@ def readArpTable():
 
     splitArpFile = arpFile.split('\n')[1:]
     for line in splitArpFile:
-        ip, hwType, flags, mac, _, netIface = removeBlank(line.split(' '))
+        ip, hwType, flags, mac, _, netIface = _removeBlank(line.split(' '))
 
         if netIface not in arpTable:
             arpTable[netIface] = []
@@ -662,11 +729,11 @@ class Connection:
         splitTo = to_.split(':')
 
         if len(splitFrom[0]) == 8:
-            self.fromAddress = reversedHexIpToIp(splitFrom[0])
+            self.fromAddress = _reversedHexIpToIp(splitFrom[0])
         self.fromPort = str(int(splitFrom[1], 16))
 
         if len(splitTo[0]) == 8:
-            self.toAddress = reversedHexIpToIp(splitTo[0])
+            self.toAddress = _reversedHexIpToIp(splitTo[0])
         self.toPort = str(int(splitTo[1], 16))
 
         self.type = str(int(type, 16))
@@ -678,6 +745,21 @@ class Connection:
         repr += '\n' + indent + f'  type: {self.type} ; uid: {self.uid} : inode: {self.inode}'
         return repr
 
+    def json(self):
+        return {
+            'from' : {
+                'address' : self.fromAddress,
+                'port' : self.fromPort
+            },
+            'to' : {
+                'address' : self.toAddress,
+                'port' : self.toPort
+            },
+            'type' : self.type,
+            'uid' : self.uid,
+            'inode' : self.inode
+        }
+
 def parseConnectionsFile(filePath):
     fileContent = _tryRead(filePath)
     if fileContent is None:
@@ -686,7 +768,7 @@ def parseConnectionsFile(filePath):
     connections = []
 
     for line in fileContent.split('\n')[1:]:
-        _, from_, to, type, _, _, _, uid, _, inode, *_ = removeBlank(line.split(' '))
+        _, from_, to, type, _, _, _, uid, _, inode, *_ = _removeBlank(line.split(' '))
         connections.append(Connection(from_, to, type, uid, inode))
 
     return connections
@@ -696,8 +778,3 @@ def tcp4Connections():
 
 def udp4Connections():
     return parseConnectionsFile(UDP_ROUTES)
-
-if __name__ == '__main__':
-    conns = parseConnectionsFile(UDP_ROUTES)
-    for conn in conns:
-        print(conn.repr())

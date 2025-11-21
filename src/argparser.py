@@ -9,6 +9,7 @@ class ArgParser:
         self.help = False
         self.interface = None
         self.interfaces = False
+        self.json = False
         self.openConnections = False
         self.ports = False
         self.protocol = None
@@ -84,6 +85,9 @@ class ArgParser:
                 elif arg == '--open-connections':
                     self.openConnections = True
 
+                elif arg == '--json':
+                    self.json = True
+
                 else:
                     print(f'Error: unrecognized argument `{arg}`')
                     sys.exit(1)
@@ -148,6 +152,9 @@ class ArgParser:
 
                 elif arg == '-O':
                     self.openConnections = True
+
+                elif arg == '-j':
+                    self.json = True
 
                 else:
                     print(f'Error: unrecognized argument `{arg}`')

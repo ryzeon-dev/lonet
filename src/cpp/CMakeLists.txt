@@ -1,7 +1,6 @@
-cmake_minimum_required(VERSION 3.30)
+cmake_minimum_required(VERSION 3.20)
 project(cpp)
 
 set(CMAKE_CXX_STANDARD 20)
 
-#add_executable(cpp binding.cpp)
 add_library(net_if_binding SHARED binding.cpp)
