@@ -7,7 +7,7 @@ from core import (
 )
 from argparser import ArgParser
 
-VERSION = 'v2.2.0'
+VERSION = 'v2.2.1'
 
 def printAllIfaceInfo(interface, args):
     jfmt = {}
@@ -84,6 +84,7 @@ def printAllIfaceInfo(interface, args):
                     'to' : to_,
                     'flags': flags
                 })
+                
             else:
                 print(f'    {from_} -> {to_}')
                 print(f'      flags: {", ".join(flags)}')
@@ -108,6 +109,7 @@ def printAllIfaceInfo(interface, args):
                     'type' : type,
                     'flags' : flags
                 })
+                
             else:
                 print(f'    {ip} -> {address}')
                 print(f'      type: {type}')
@@ -220,8 +222,8 @@ def all(args):
         else:
             if ok:
                 print()
-
-    print(json.dumps(jfmt))
+    if args.json:
+        print(json.dumps(jfmt))
 
 if __name__ == '__main__':
     argv = sys.argv
@@ -271,6 +273,7 @@ if __name__ == '__main__':
                             print(json.dumps({
                                 interface.name : interface.jsonVerbose()
                             }))
+                            
                         else:
                             print(interface.verbose())
 
@@ -279,6 +282,7 @@ if __name__ == '__main__':
                             print(json.dumps({
                                 interface.name: interface.jsonPretty()
                             }))
+                            
                         else:
                             print(interface.verbose())
 
